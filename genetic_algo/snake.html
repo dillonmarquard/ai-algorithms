@@ -1,0 +1,427 @@
+<html>
+	<div>
+		<h3>AI Games</h3>
+		<ul>
+			<li><a href="snake.html">Snake</a></li>
+			<li><a href="cargame.html">PID Car</a></li>
+		</ul>
+	</div>
+	<body>
+<canvas id="snake" width="600" height="600"></canvas>
+<script>const canvas = document.getElementById("snake");
+const context = canvas.getContext("2d");
+
+var fps = 7;
+var scl = 25;
+var snake = new snake();
+var food = new food();
+var path = new snakePathfinder();
+food.newLoc();
+
+//snake obj
+function snake(){
+	
+	
+	canvas.width = 600;
+	canvas.length = 600;
+	var cols = Math.floor(canvas.width/scl);
+	var rows = Math.floor(canvas.height/scl);
+	this.x = Math.floor(Math.random()*cols)*scl;
+	this.y = Math.floor(Math.random()*rows)*scl;
+	this.xspeed = 0;
+	this.yspeed = 0;
+	this.maxscore = 0;
+	this.tail = [];
+	this.score = this.tail.length;
+	this.pathexists = false;
+	this.autoplay = false;
+
+	this.toggleautoplay = function(){
+		if(this.autoplay === false){
+			this.autoplay = true;
+			path.simplePath();
+			
+		}else{
+			this.autoplay = false;
+		}
+	}
+
+	this.update = function(){
+		//move tail
+		for(var i = 0; i < this.tail.length - 1; i++){
+			this.tail[i] = this.tail[i + 1];
+		}
+		this.tail[this.tail.length - 1] = [this.x,this.y];
+
+		//move snake
+		this.x = this.x + this.xspeed*scl;
+		this.y = this.y + this.yspeed*scl;
+		//check if on food coords
+		this.checkdeath();
+		this.eat();
+
+
+		//console.log(path.path)
+
+
+		//checkdeath
+
+		this.score = this.tail.length;
+		if(this.score > this.maxscore){
+			this.maxscore = this.score
+		}
+		this.showscore();
+		changeable = true;
+		//simplePathfinder
+		if(this.autoplay === true){
+			path.simplePath();
+			//display path
+			for(var x = 0; x < path.path.length - 1;x++){
+				var x1 = path.path[x][0]
+				var y1 = path.path[x][1]
+				context.fillStyle = "#FFFF00"
+				context.fillRect(x1*scl,y1*scl,scl,scl)
+			}
+			try{
+				snake.changeDirection(path.path[path.path.length - 2][0],path.path[path.path.length - 2][1])
+			}catch(error){
+			}
+		}
+	};
+
+	this.changeDirection = function(tx,ty){
+		if(this.x/scl - tx == -1){
+
+			//console.log("right")
+			this.xspeed = 1;
+			this.yspeed = 0;
+			return;
+		}
+		if(this.x/scl - tx == 1){
+			//console.log("left")
+			this.xspeed = -1;
+			this.yspeed = 0;
+			return;
+		}
+		if(this.y/scl - ty == -1){
+			//console.log("down")
+			this.xspeed = 0;
+			this.yspeed = 1;
+			return;
+		}
+		if(this.y/scl - ty == 1){
+			//console.log("up")
+			this.xspeed = 0;
+			this.yspeed = -1;
+			return;
+		}
+	};
+
+	this.checkdeath = function(){
+		if(this.x < 0 || this.y < 0 || this.y > canvas.height-scl || this.x > canvas.width-scl){
+			this.die();
+		}
+		for(var i = 0; i < this.tail.length; i++){
+			if(this.tail[i][0] === this.x && this.tail[i][1] === this.y){
+				this.die();
+			}
+		}
+	};
+
+	this.die = function(){
+		console.log("dead")
+		this.x = 0;
+		this.y = 0;
+		this.xspeed = 0;
+		this.yspeed = 0;
+		this.tail = [];
+
+	};
+
+	this.addTail = function(){
+		this.tail.push([this.x,this.y]);
+	};
+
+	this.eat = function(){
+		if(this.x == food.x*scl && this.y == food.y*scl){
+			snake.addTail();
+			food.newLoc();
+			path.simplePath();
+		}
+	};
+
+	this.show = function(){
+		context.fillStyle = "#009000";
+		context.fillRect(this.x,this.y,scl,scl);
+		context.fillStyle = "#008000";
+		for(var i = 0; i < this.tail.length; i++){
+			context.fillRect(this.tail[i][0],this.tail[i][1],scl,scl);
+		}
+		//grid
+		// context.fillStyle = "#ffffff";
+		// for(var x = 0; x < canvas.width;x=x+scl){
+			// context.fillRect(x,0,1,canvas.height);
+		// }
+		// for (y = 0; y < canvas.height;y=y+scl){
+			// context.fillRect(0,y,canvas.width,1);
+		// }
+	};
+
+	this.showscore = function(){
+		context.fillStyle = "#ffffff";
+		context.font = "20px Arial Bold";
+		context.fillText("Current: " + this.score + " " + "Max: " + this.maxscore,10,15)
+	};
+
+
+
+}
+//food obj
+function food(){
+	this.x = 0;
+	this.y = 0;
+
+	this.newLoc = function(){
+		
+		var cols = Math.floor(canvas.width/scl);
+		var rows = Math.floor(canvas.height/scl);
+		this.allowed = false;
+		while(this.allowed == false){
+			this.x = Math.floor(Math.random()*cols);
+			this.y = Math.floor(Math.random()*rows);
+			this.allowed = true;
+			for(var i = 0; i < snake.tail.length; i++){
+				if(this.x*scl == snake.tail[i][0] && this.y*scl == snake.tail[i][1] || this.x*scl == snake.x && this.y*scl == snake.y){
+					console.log("failed");
+					this.allowed = false;
+				}
+			}
+		}
+		console.log("Succeeded");
+	};
+
+	this.show = function(){
+		context.fillStyle = "#ff0000";
+		context.fillRect(this.x*scl,this.y*scl,scl,scl);
+	};
+}
+//pathing obj
+function snakePathfinder(){
+
+	this.makeArray = function(w, h, val, name) {
+			for(var i = 0; i < h; i++) {
+				name[i] = [];
+				for(var j = 0; j < w; j++) {
+					name[i][j] = val;
+				}
+			}
+	}
+	this.simplePath = function(){
+		this.path = [];
+		this.map = [];
+		this.nonmap = [];
+		this.makeArray(canvas.width/scl,canvas.height/scl,0,this.map);
+		this.makeArray(canvas.width/scl,canvas.height/scl,0,this.nonmap);
+
+		this.isValid = function(x1,y1){
+			if(x1 >= 0 && y1 >= 0 && x1 < canvas.width/scl && y1 < canvas.height/scl && this.nonmap[x1][y1] == 0){
+				return true;
+			}else{
+				return false;
+			}
+		}
+		this.isValidd = function(x1,y1){
+			if(x1 >= 0 && y1 >= 0 && x1 < canvas.width/scl && y1 < canvas.height/scl){
+				return true;
+			}else{
+				return false;
+			}
+		}
+		//generate nonmap with snake included
+		this.map[snake.x/scl][snake.y/scl] = 1
+
+		//this.nonmap[snake.x/scl][snake.y/scl] = 1;
+		while(true){
+			for(var x = -1; x < snake.tail.length - 1;x++){
+				try{
+				this.nonmap[snake.tail[x][0]/scl][snake.tail[x][1]/scl] = 1;
+				}catch(error){
+					
+				}
+			}
+			for(var i = 1; i < 500;i++){
+				for(var x = 0; x < canvas.width/scl;x++){
+					for(var y = 0; y < canvas.height/scl;y++){
+						if(this.map[x][y] === i && this.nonmap[x][y] == 0){
+							if(this.isValid(x+1,y) === true){
+								this.map[x+1][y] = i+1;
+								this.nonmap[x][y] = 1;
+							}
+							if(this.isValid(x-1,y) === true){
+								this.map[x-1][y] = i+1;
+								this.nonmap[x][y] = 1;
+							}
+							if(this.isValid(x,y+1) === true){
+								this.map[x][y+1] = i+1;
+								this.nonmap[x][y] = 1;
+							}
+							if(this.isValid(x,y-1) === true){
+								this.map[x][y-1] = i+1;
+								this.nonmap[x][y] = 1;
+							}
+						}
+
+					if(this.map[food.x][food.y] > 0 || i === 500){
+							break;
+						}
+					}
+					if(this.map[food.x][food.y] > 0 || i === 500){
+						break;
+						}
+				}
+				if(this.map[food.x][food.y] > 0 || i === 500){
+					break;
+						}
+			}
+			if(this.map[food.x][food.y] > 0 || i === 500){
+				break;
+			}
+		}
+		//generate path from map
+		this.currentnum = this.map[food.x][food.y];
+
+		this.currentxy = [food.x,food.y];
+		this.path.push([food.x,food.y])
+
+		//redo snake nope on nonmap
+		this.map[snake.x/scl][snake.y/scl] = 1
+		this.nonmap = [];
+		this.makeArray(canvas.width/scl,canvas.height/scl,0,this.nonmap);
+
+		for(var x = 0; x < snake.tail.length - 1;x++){
+			try{
+			this.nonmap[snake.tail[x][0]/scl][snake.tail[x][1]/scl] = 1;
+			}catch(error){
+				
+			}
+		}
+		for(var x = 0; x < snake.tail.length - 1;x++){
+			try{
+			this.map[snake.tail[x][0]/scl][snake.tail[x][1]/scl] = 1000;
+			}catch(error){
+				
+			}
+		}
+		
+		while(true){
+			for(var x = 0; x < snake.tail.length - 1;x++){
+				if(this.map[this.currentxy[0]][this.currentxy[1]] = 1000){
+					continue;
+				}
+			}
+			this.pastnum = this.currentnum;
+			if(this.isValid(this.currentxy[0]+1,this.currentxy[1]) === true){
+				if(this.map[this.currentxy[0]+1][this.currentxy[1]] === this.currentnum - 1){
+					this.path.push([this.currentxy[0]+1,this.currentxy[1]]);
+					this.currentnum = this.map[this.currentxy[0]+1][this.currentxy[1]];
+					this.currentxy = [this.currentxy[0]+1,this.currentxy[1]];
+				}
+			}
+			if(this.isValid(this.currentxy[0]-1,this.currentxy[1]) === true){
+				if(this.map[this.currentxy[0]-1][this.currentxy[1]] === this.currentnum - 1){
+					this.path.push([this.currentxy[0]-1,this.currentxy[1]]);
+					this.currentnum = this.map[this.currentxy[0]-1][this.currentxy[1]];
+					this.currentxy = [this.currentxy[0]-1,this.currentxy[1]];
+				}
+			}
+			if(this.isValid(this.currentxy[0],this.currentxy[1]+1) === true){
+				if(this.map[this.currentxy[0]][this.currentxy[1]+1] === this.currentnum - 1){
+					this.path.push([this.currentxy[0],this.currentxy[1]+1]);
+					this.currentnum = this.map[this.currentxy[0]][this.currentxy[1]+1];
+					this.currentxy = [this.currentxy[0],this.currentxy[1]+1];
+				}
+			}
+			if(this.isValid(this.currentxy[0],this.currentxy[1]-1) === true){
+				if(this.map[this.currentxy[0]][this.currentxy[1]-1] === this.currentnum - 1){
+					this.path.push([this.currentxy[0],this.currentxy[1]-1]);
+					this.currentnum = this.map[this.currentxy[0]][this.currentxy[1]-1];
+					this.currentxy = [this.currentxy[0],this.currentxy[1]-1];
+				}
+			}
+			if(this.currentxy[0] === snake.x/scl && this.currentxy[1] === snake.y/scl || this.pastnum === this.currentnum){
+				break;
+			}
+		}
+		
+		
+	};
+}
+//draw elements onto canvas
+function draw(){
+	//background
+	context.fillStyle = "#000000"
+	context.fillRect(0,0,canvas.width,canvas.height)
+	//snake
+	snake.update();
+	snake.show();
+	//food
+	food.show();
+}
+
+function gameloop(){
+    setTimeout(function() {
+		draw();
+		gameloop();
+	}, 1000 / fps);
+}
+
+window.addEventListener("keydown", function(e){
+    var keyCode = e.keyCode;
+    if(changeable === true){
+        if(keyCode === 38){
+    		if(snake.yspeed !== 1){
+    			snake.xspeed = 0;
+    			snake.yspeed = -1;
+    		}
+    	}
+    	if(keyCode === 40){
+    		if(snake.yspeed !== -1){
+    			snake.xspeed = 0;
+    			snake.yspeed = 1;
+    		}
+    	}
+    	if(keyCode === 39){
+    		if(snake.xspeed !== -1){
+    			snake.xspeed = 1;
+    			snake.yspeed = 0;
+    		}
+    	}
+    	if(keyCode === 37){
+    		if(snake.xspeed !== 1){
+    			snake.xspeed = -1;
+    			snake.yspeed = 0;
+    		}
+    	}
+    	changeable = false;
+    }
+	if(keyCode === 32){
+		// console.table(path.map)
+		// console.log(snake.tail)
+		// while(true){
+		// }
+		//path.simplePath();
+		// for(var x = 0; x < path.path.length;x++){
+			// x1 = path.path[x][0]
+			// y1 = path.path[x][1]
+			// context.fillStyle = "#FFFF00"
+			// context.fillRect(x1*scl,y1*scl,scl,scl)
+		// }
+	 }
+ });
+
+
+gameloop();</script>
+<span id="audio"></span>
+</body>
+<p><button type="button" onclick="snake.toggleautoplay()">Autoplay toggle</button> <button type="button" onclick="fps = 8;audio.pause();">Relaxing</button> <button type="button" onclick="fps = 24;audio.pause();">Quick</button> <button type="button" onclick="fps = 20000000;audio.load();audio.play();",>Sonic</button></p>
+</html>
